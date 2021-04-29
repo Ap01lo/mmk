@@ -3,12 +3,14 @@ from PyQt5.QtGui    import *
 from PyQt5.QtCore   import *
 from Match          import *
 from ClassRoomCopy  import *
+from User2ClassRoom import *
 import sys
+import time
 
 class CorClassInfo(QDialog):
     def __init__(self):
         super(CorClassInfo,self).__init__()
-        self.setWindowTitle('增加教室数据')
+        self.setWindowTitle('修改教室数据')
         self.setFixedSize(250, 140)
         self.widget()
         self.setting()
@@ -21,6 +23,7 @@ class CorClassInfo(QDialog):
         self.edit_people = QLineEdit()
         self.edit_status = QLineEdit()
         self.btn_confirm = QPushButton('确认修改')
+        self.btn_confirm.clicked.connect(self.click_confirm)
 
     def setting(self):
         layout = QGridLayout()
@@ -40,6 +43,34 @@ class CorClassInfo(QDialog):
         layout.addWidget(self.btn_confirm, 3, 1, 1, 1)
         
         self.setLayout(layout)
+    
+    def click_confirm(self):
+        ID = self.edit_id.text()
+        people = self.edit_people.text()
+        status = self.edit_status.text()
+        # 判断是否合法
+        id_legle = classRoomID_match(ID)
+        people_legle = people_match(people)
+        status_legle = 1 if int(status) in [0,1,2,3,4,5,] else 0
+        mytime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        # 判断是否存在
+        if id_legle and people_legle and status_legle:
+            id_exist = ClassRoom(ID).PullClassroom()
+            if not id_exist:
+                QMessageBox.critical(self,'错误',f'事件 {ID} 不存在，请重新输入')
+            else:
+                ClassRoom(ID,people,status = int(status)).PushClassroom()
+                if status:
+                    User2ClassRoom(ID,'Administer',status).PushUC()
+                    with open('log.txt','a') as f:
+                        f.write(f'{mytime} 管理员修改了事件 {ID} 座位 {people} 状态 {status}\n')
+                QMessageBox.critical(self,'成功',f'您已修改事件 {ID}')
+        else:
+            QMessageBox.critical(self,'错误',f'格式错误，请重新输入')
+
+
+        # 执行修改操作
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
